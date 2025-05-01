@@ -10,7 +10,10 @@ contract Todo {
 
     mapping(address => Task[]) public userTasks;
 
-    function addTask(string memory _content) public {
+    uint public taskFee = 0.01 ether; // Biaya untuk menambahkan task
+
+    function addTask(string memory _content) public payable {
+        require(msg.value >= taskFee, "Not enough ETH sent");
         uint taskId = userTasks[msg.sender].length;
         userTasks[msg.sender].push(Task(taskId, _content, false));
     }
