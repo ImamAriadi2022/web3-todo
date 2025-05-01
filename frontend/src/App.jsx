@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import TodoListAbi from "./TodoList.json";
 
-const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Ganti sesuai address kontrakmu
+const contractAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"; // Ganti sesuai address kontrakmu
 
 function App() {
   const [provider, setProvider] = useState(null);
@@ -15,21 +15,22 @@ function App() {
 
   const loadBlockchain = async () => {
     try {
-      if (window.ethereum) {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const tempProvider = new ethers.providers.Web3Provider(window.ethereum);
-        const tempSigner = tempProvider.getSigner();
-        const todoContract = new ethers.Contract(
-          contractAddress,
-          TodoListAbi.abi,
-          tempSigner
-        );
-        setProvider(tempProvider);
-        setSigner(tempSigner);
-        setContract(todoContract);
-      } else {
+      if (!window.ethereum) {
         setError("Ethereum provider tidak ditemukan. Install MetaMask.");
+        return;
       }
+
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const tempProvider = new ethers.providers.Web3Provider(window.ethereum);
+      const tempSigner = tempProvider.getSigner();
+      const todoContract = new ethers.Contract(
+        contractAddress,
+        TodoListAbi.abi,
+        tempSigner
+      );
+      setProvider(tempProvider);
+      setSigner(tempSigner);
+      setContract(todoContract);
     } catch (err) {
       setError("Gagal menghubungkan ke Ethereum: " + err.message);
     }
