@@ -54,11 +54,9 @@ function App() {
 
   const addTask = async () => {
     if (!contract || !input.trim()) return;
-
+  
     try {
-      const tx = await contract.addTask(input, {
-        value: ethers.utils.parseEther("0.01"),
-      });
+      const tx = await contract.addTask(input); // Tidak mengirim ETH jika tidak diperlukan
       await tx.wait();
       setInput("");
       await loadTasks();
@@ -89,7 +87,7 @@ function App() {
 
   const deleteTask = async (id) => {
     if (!contract) return;
-
+  
     try {
       const tx = await contract.deleteTask(id); // Fungsi deleteTask harus ada di smart contract
       await tx.wait();
