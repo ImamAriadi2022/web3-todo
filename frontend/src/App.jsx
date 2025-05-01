@@ -1,35 +1,121 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import { ethers } from "ethers";
+import TodoListAbi from "./TodoList.json";
+
+const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Ganti sesuai address kontrakmu
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [contract, setContract] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadBlockchain = async () => {
+    try {
+      if (window.ethereum) {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const tempProvider = new ethers.providers.Web3Provider(window.ethereum);
+        const tempSigner = tempProvider.getSigner();
+        const todoContract = new ethers.Contract(
+          contractAddress,
+          TodoListAbi.abi,
+          tempSigner
+        );
+        setProvider(tempProvider);
+        setSigner(tempSigner);
+        setContract(todoContract);
+      } else {
+        setError("Ethereum provider tidak ditemukan. Install MetaMask.");
+      }
+    } catch (err) {
+      setError("Gagal menghubungkan ke Ethereum: " + err.message);
+    }
+  };
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const result = await contract.getTasks();
+      setTasks(result);
+      setLoading(false);
+    } catch (err) {
+      setError("Gagal memuat task: " + err.message);
+      setLoading(false);
+    }
+  };
+
+  const addTask = async () => {
+    if (!contract || !input.trim()) return;
+
+    try {
+      const tx = await contract.addTask(input);
+      await tx.wait(); // Tunggu konfirmasi transaksi
+      setInput("");
+      await loadTasks();
+    } catch (err) {
+      setError("Gagal menambahkan task: " + err.message);
+    }
+  };
+
+  const toggle = async (id) => {
+    if (!contract) return;
+
+    try {
+      const tx = await contract.toggleTask(id);
+      await tx.wait();
+      await loadTasks();
+    } catch (err) {
+      setError("Gagal toggle task: " + err.message);
+    }
+  };
+
+  useEffect(() => {
+    loadBlockchain();
+  }, []);
+
+  useEffect(() => {
+    if (contract) {
+      loadTasks();
+    }
+  }, [contract]);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div style={{ padding: 20 }}>
+      <h1>📝 Web3 To-Do List</h1>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {loading ? (
+        <p>Loading tasks...</p>
+      ) : (
+        <>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="New Task"
+          />
+          <button onClick={addTask} disabled={!contract || !input.trim()}>
+            Add
+          </button>
+
+          <ul>
+            {tasks.map((task, i) => (
+              <li key={i}>
+                <input
+                  type="checkbox"
+                  checked={task.completed}
+                  onChange={() => toggle(task.id)}
+                />
+                {task.content}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
